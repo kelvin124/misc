@@ -1,0 +1,115 @@
+env: LOCAL
+domain: ""
+
+#application config
+spring.kafka.consumer.properties.allow.auto.create.topics: true
+spring:
+  mvc:
+    async:
+      request-timeout: 60000
+  http:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  application:
+    name: vessel-planning-backend
+  jackson:
+    serialization:
+      indent-output: true
+  cloud:
+    kubernetes:
+      discovery:
+        enabled: false
+  data:
+    mongodb:
+      authentication-database: admin
+      database: ICAVE-VP
+      #username: root
+      #password: root
+      #host: localhost:27017
+      uri: mongodb://root:root@localhost:27017
+  kafka:
+    properties:
+      acks: all
+      max.poll:
+          records: 100
+          interval.ms: 600000
+    consumer:
+      #group-id: ${env}-${bu}-${spring.application.name}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        allow.auto.create.topics: true
+        spring.json.trusted.packages: "*"
+        max.partition.fetch.bytes: 3145728
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        max.request.size: 8388608
+
+multi-tenant:
+  tenants:
+    ICAVE:
+      kafka:
+        bootstrap-servers: localhost:9092
+        saslMechanism: PLAIN
+        saslJaasConfig: org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka" password="kafka";
+        sslEndpointIdentificationAlgorithm: https
+        securityProtocol: SASL_PLAINTEXT
+      hpdx:
+        url: https://tst.hpdx.io/api
+        username: "VeronicaAmbrose"
+        terminalId: ICAVE
+        apiKey: ${HPDX_API_KEY:598428b671654256aade5ae7d1e0f1cf} # MULTITENANT_TENANTS_ICAVE_HPDX_APIKEY
+        dischargePort: SESTO
+        enableBaplie: false
+        enableMovins: false
+      mongo:
+        database: ICAVE-VP
+        username: root
+        password: root # MULTITENANT_TENANTS_ICAVE_MONGO_PASSWORD
+        host: localhost:27017
+        uri: mongodb://${multi-tenant.tenants.ICAVE.mongo.username}:${multi-tenant.tenants.ICAVE.mongo.password}@${multi-tenant.tenants.ICAVE.mongo.host}/${multi-tenant.tenants.ICAVE.mongo.database}?retryWrites=true&w=majority&authSource=${spring.data.mongodb.authentication-database}
+      ngen:
+        webAPI:
+          url: https://icaveiut1.hphit.hutchisonports.com:30154/services/message/psiService
+          username: admin
+          password: abcd1234% # MULTITENANT_TENANTS_ICAVE_MONGO_PASSWORD
+          connection-request-timeout: "1200000" #millisecond
+          connect-timeout: "1200000" #millisecond
+          socket-timeout: "1200000" #millisecond
+          retry-count: 5
+      guider:
+        webAPI:
+          url: https://icaveiut1.hphit.hutchisonports.com:30160
+          connection-request-timeout: "1200000" #millisecond
+          connect-timeout: "1200000" #millisecond
+          socket-timeout: "1200000" #millisecond
+          retry-count: 5
+      schedulers:
+        liveUpdateMoveTimeAndSavePlan:
+          cron: "5 * * * * *"
+          lockAtMostFor: 50
+          lockAtLeastFor: 50
+        ScheduleLiveMoveUpdateTime:
+          cron: "5 * * * * *"
+          lockAtMostFor: 50
+          lockAtLeastFor: 50
+        deletePlansAfterVoyageDeparted:
+          cron: "0 0 6 ? * *"     # veracruz utc-6
+          lockAtMostFor: 3600
+          lockAtLeastFor: 3600
+        deletePlansWithoutName:
+          cron: "0 0 6 ? * *"     # veracruz utc-6
+          lockAtMostFor: 3600
+          lockAtLeastFor: 3600
+        cleanupExpiredSessions:
+          cron: "35 * * * * *"
+          lockAtMostFor: 50
+          lockAtLeastFor: 50
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
