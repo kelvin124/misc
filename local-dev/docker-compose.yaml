@@ -1,0 +1,144 @@
+services:
+
+  zookeeper:
+    image: zookeeper
+    container_name: zookeeper
+    volumes:
+      - zookeeper:/var/lib/zookeeper/log
+      - zookeeper:/var/lib/zookeeper/data
+      - zookeeper:/var/lib/zookeeper/datalog
+    ports:
+      - "2181:2181"
+    networks:
+      - dev
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    environment:
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_HEAP_OPTS: -Xmx2048m -Xms2048m
+      KAFKA_CFG_MESSAGE_MAX_BYTES: 8388608
+      KAFKA_CFG_MAX_REQUEST_SIZE: 4000000
+      KAFKA_CFG_LISTENERS: INTERNAL://:9093, CLIENT://:9092,
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka:9093, CLIENT://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      #SASL
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT, CLIENT:SASL_PLAINTEXT
+      KAFKA_CFG_SASL_MECHANISM_INTER_BROKER_PROTOCOL: None
+      KAFKA_CFG_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_TLS_CLIENT_AUTH: none
+      KAFKA_CLIENT_USERS: kafka
+      KAFKA_CLIENT_PASSWORDS: kafka
+    volumes:
+      - kafka:/var/lib/kafka/data
+    ports:
+      - "9092:9092"
+    networks:
+      - dev
+
+# To enable replica set, go into the container, execute below
+# 1. mongosh -u root -p root
+# 2. rs.initiate()
+
+  mongodb:
+    image: mongo:latest
+    depends_on:
+      busybox:
+        condition: service_completed_successfully
+        restart: true
+    ports:
+      - "27017:27017"
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017", "--keyFile", "/usr/mongo/keyfile"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - mongodb:/data/db
+      - keyfile:/usr/mongo
+      #- ./mongo/init.js:/docker-entrypoint-initdb.d/init.js
+    networks:
+      - dev
+
+  busybox:
+    image: busybox:latest
+#    command: ["sh",  "-c", "while true; do sleep 30; done;"]
+    command: ["sh", "-c", "echo -n \
+      9EDZ3kHsKkewU0ZtpeBbadV1NU/hia7Bh84hSSEbvVZ52clH8ddn/wuOxEk7xCPa
+      +iQqDpNvI5CBI738LYLoYPBzF/og3FZNtkRiQsSxHIwA0DBPLcPmLwvPC80sMImg
+      8OD5MkkDF9z9Hzj9REtkp0lM291LVb3DdXL3C0Y+4q9mQxsNV9cgAxqhgw7MDgD5
+      dqSXda1/ZZ/OmZYO55C30TvL/oW0ew/n$iHgGVCDDYlWwHcyOJsEQFQopasorGutR
+      pt2iZ7Fo0nu8mGt5L9YnZ15t8Es3Ic6qDWnaCIOufEl4f45oREeivZdlJCG8AtRy
+      v2TMKgdp5Yq1Knhc8WsfctDoP3BxFKeRzpJd5uHNayHGwSnjAVnE2WKBv2KiqRjv
+      MKgeyI5ZcK59CfqeGtiHIXWylzMhDIeWtL1WC1HU7vKanmiI3FLt0RNHSkSU+9FV
+      ZUCprVCS8t00bHFT3z560cqwwCELiSzRc9rrb5l7/ffYc1yJ8xv7Cku6Mm6Gy0e0
+      DtsGa0pqH5vYAzgmFaFvAytrzifQ04H0KwGQ6dDkL2NOrzn5Y6+Q5xch059qMEEw
+      ScsWTCNZic6x+LKrlxpmnpG93ZOsEivZvXMHDUgIdceE/mTby19CpN7/Y3kdop9h
+      1TEprxvb1PrDKgX1C2B2xVLhR7pGAxyyffz6Hs6tq+2LWiHltnJiVIc57aWVF4qO
+      XyIypEEHWdHZ79/GiFkrn+CIXfkANbFrkEW16QHFyqZnZ8+0ekOQJ9kve8e1W9tY
+      giSbm7+S9WNSW0dOvTfN/8ddf040QFvMujsAx/z9mQ4voaBNyqmX1g2vH0h9GLSt
+      3FFh+XBR63d1fVTAl8x54K6QXmKpmnA0whq2AjYnZTVhD5Tb1m5z9wFjY0MljPul
+      MW6ZBVh6l3muKlSWo7i9G6jygY1otRhL7/PnuW8TkjVzy/XT0ASlxkrWVyoc5ZAC
+      BbVElvL3ZpECvSMkCwVFTk5zyqc6S3pl3m8HgcS4IhOaL91Y > /usr/mongo/keyfile && chmod 600 /usr/mongo/keyfile && chown 999:999 /usr/mongo/keyfile"]
+    volumes:
+     - keyfile:/usr/mongo
+
+#  zookeeper2:
+#    image: zookeeper
+#    container_name: zookeeper2
+#    volumes:
+#      - zookeeper2:/var/lib/zookeeper/log
+#      - zookeeper2:/var/lib/zookeeper/data
+#      - zookeeper2:/var/lib/zookeeper/datalog
+#    ports:
+#      - "12181:2181"
+#    networks:
+#      - dev
+
+#  kafka2:
+#    image: bitnami/kafka:latest
+#    container_name: kafka2
+#    environment:
+#      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper2:2181
+#      ALLOW_PLAINTEXT_LISTENER: "yes"
+#      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+#      KAFKA_HEAP_OPTS: -Xmx2048m -Xms2048m
+#      KAFKA_CFG_MESSAGE_MAX_BYTES: 8388608
+#      KAFKA_CFG_MAX_REQUEST_SIZE: 4000000
+#      KAFKA_CFG_LISTENERS: INTERNAL://:9093, CLIENT://:9092,
+#      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka2:9093, CLIENT://localhost:10092
+#      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+#      #SASL
+#      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT, CLIENT:SASL_PLAINTEXT
+#      KAFKA_CFG_SASL_MECHANISM_INTER_BROKER_PROTOCOL: None
+#      KAFKA_CFG_SASL_ENABLED_MECHANISMS: PLAIN
+#      KAFKA_TLS_CLIENT_AUTH: none
+#      KAFKA_CLIENT_USERS: kafka
+#      KAFKA_CLIENT_PASSWORDS: kafka
+#    volumes:
+#      - kafka2:/var/lib/kafka/data
+#    ports:
+#      - "10092:9092"
+#    networks:
+#      - dev
+
+volumes:
+  zookeeper:
+    driver: local
+#  zookeeper2:
+#    driver: local
+  kafka:
+    driver: local
+#  kafka2:
+#    driver: local
+  keyfile:
+    driver: local
+  mongodb:
+    driver: local
+
+networks:
+  dev:
+    name: dev
+    driver: bridge
